@@ -1457,44 +1457,47 @@ function System.autoparry.start()
             
             -- ENHANCED TIMING CALCULATION FOR CLOSE COMBAT
             local time_to_impact = distance / math.max(speed, 1)
-            local reaction_time_buffer = 0.03 -- Further reduced from 40ms to 30ms base reaction time
-            local ping_buffer = (PingCompensation:get_compensated_ping() / 1000) * 1.8 -- Increased from 1.5 to 1.8 for maximum ping compensation
+            local reaction_time_buffer = 0.05 -- Increased from 30ms to 50ms to prevent early parrying
+            local ping_buffer = (PingCompensation:get_compensated_ping() / 1000) * 1.5 -- Reduced from 1.8 to 1.5 for less aggressive compensation
             
-            -- Dynamic timing adjustments based on distance and speed - more aggressive
+            -- Dynamic timing adjustments based on distance and speed - more conservative
             if distance <= 8 then
-                reaction_time_buffer = 0.01 -- Reduced from 15ms to 10ms for extreme close range
+                reaction_time_buffer = 0.025 -- Increased from 10ms to 25ms for extreme close range
             elseif distance <= 15 then
-                reaction_time_buffer = 0.02 -- Reduced from 25ms to 20ms for very close range
+                reaction_time_buffer = 0.035 -- Increased from 20ms to 35ms for very close range
             elseif distance <= 25 then
-                reaction_time_buffer = 0.025 -- Reduced from 35ms to 25ms for close combat
+                reaction_time_buffer = 0.045 -- Increased from 25ms to 45ms for close combat
             elseif distance <= 35 then
-                reaction_time_buffer = 0.03 -- Reduced from 45ms to 30ms for medium range
+                reaction_time_buffer = 0.055 -- Increased from 30ms to 55ms for medium range
             elseif distance <= 45 then
-                reaction_time_buffer = 0.035 -- Added for extended range
+                reaction_time_buffer = 0.065 -- Increased from 35ms to 65ms for extended range
             end
             
-            -- Speed-based timing adjustments - ultra aggressive for fastest reaction
+            -- Speed-based timing adjustments - more conservative to prevent early parrying
             if speed > 1500 then
-                reaction_time_buffer = reaction_time_buffer * 0.2 -- Reduced from 0.3 for ultra extreme speed
+                reaction_time_buffer = reaction_time_buffer * 0.4 -- Increased from 0.2 for ultra extreme speed
             elseif speed > 1000 then
-                reaction_time_buffer = reaction_time_buffer * 0.25 -- Reduced from 0.3 for extreme speed
+                reaction_time_buffer = reaction_time_buffer * 0.5 -- Increased from 0.25 for extreme speed
             elseif speed > 800 then
-                reaction_time_buffer = reaction_time_buffer * 0.3 -- Reduced from 0.4 for very high speed
+                reaction_time_buffer = reaction_time_buffer * 0.6 -- Increased from 0.3 for very high speed
             elseif speed > 500 then
-                reaction_time_buffer = reaction_time_buffer * 0.5 -- Reduced from 0.6 for high speed
+                reaction_time_buffer = reaction_time_buffer * 0.7 -- Increased from 0.5 for high speed
             elseif speed > 300 then
-                reaction_time_buffer = reaction_time_buffer * 0.65 -- Reduced from 0.75 for medium speed
+                reaction_time_buffer = reaction_time_buffer * 0.85 -- Increased from 0.65 for medium speed
             end
             
-            -- Calculate optimal parry timing with predictive compensation
-            local ball_prediction = ball.Position + (velocity * 0.1) -- Predict ball position 100ms ahead
+            -- Calculate optimal parry timing with predictive compensation - more conservative
+            local ball_prediction = ball.Position + (velocity * 0.08) -- Reduced prediction from 100ms to 80ms ahead
             local predicted_distance = (LocalPlayer.Character.PrimaryPart.Position - ball_prediction).Magnitude
             local time_to_predicted_impact = predicted_distance / math.max(speed, 1)
             local optimal_timing = math.min(time_to_impact, time_to_predicted_impact) - reaction_time_buffer - ping_buffer
-            local should_parry_now = optimal_timing <= 0.005 -- Reduced from 0.008 to 0.005 (5ms for ultra-fast reaction)
+            local should_parry_now = optimal_timing <= 0.012 -- Increased from 0.005 to 0.012 (12ms for more conservative timing)
             
-            -- Only proceed if timing is right (prevents early parrying)
-            if not should_parry_now and distance <= 40 then -- Increased from 35 to 40
+            -- Additional safety check - only parry if ball is actually approaching
+            local is_approaching = dot_to_player > 0.2 -- Increased from default to ensure ball is moving toward player
+            
+            -- Only proceed if timing is right and ball is approaching (prevents early parrying)
+            if (not should_parry_now or not is_approaching) and distance <= 40 then
                 continue
             end
             
