@@ -356,7 +356,7 @@ task.spawn(function()
     end
 end)
 
-local Library = loadstring(game:HttpGet("https://dustebin.com/api/pastes/8slAgXiM.py/raw"))()
+local Library = loadstring(game:HttpGet("https://pastebin.com/raw/yUFi8aFu"))()
 
 local main = Library.new()
 
@@ -1457,33 +1457,37 @@ function System.autoparry.start()
             
             -- ENHANCED TIMING CALCULATION FOR CLOSE COMBAT
             local time_to_impact = distance / math.max(speed, 1)
-            local reaction_time_buffer = 0.05 -- 50ms base reaction time
-            local ping_buffer = (PingCompensation:get_compensated_ping() / 1000) * 1.2 -- 20% extra ping compensation
+            local reaction_time_buffer = 0.04 -- Reduced from 50ms to 40ms base reaction time
+            local ping_buffer = (PingCompensation:get_compensated_ping() / 1000) * 1.5 -- Increased from 1.2 to 1.5 for better ping compensation
             
             -- Dynamic timing adjustments based on distance and speed
             if distance <= 8 then
-                reaction_time_buffer = 0.02 -- 20ms for extreme close range
+                reaction_time_buffer = 0.015 -- Reduced from 20ms to 15ms for extreme close range
             elseif distance <= 15 then
-                reaction_time_buffer = 0.03 -- 30ms for very close range
+                reaction_time_buffer = 0.025 -- Reduced from 30ms to 25ms for very close range
             elseif distance <= 25 then
-                reaction_time_buffer = 0.04 -- 40ms for close combat
+                reaction_time_buffer = 0.035 -- Reduced from 40ms to 35ms for close combat
+            elseif distance <= 35 then
+                reaction_time_buffer = 0.045 -- Added for medium range
             end
             
-            -- Speed-based timing adjustments
-            if speed > 800 then
-                reaction_time_buffer = reaction_time_buffer * 0.5 -- Half reaction time for extreme speed
+            -- Speed-based timing adjustments - more aggressive for better timing
+            if speed > 1000 then
+                reaction_time_buffer = reaction_time_buffer * 0.3 -- Reduced from 0.5 for extreme speed
+            elseif speed > 800 then
+                reaction_time_buffer = reaction_time_buffer * 0.4 -- Reduced from 0.5 for very high speed
             elseif speed > 500 then
-                reaction_time_buffer = reaction_time_buffer * 0.7 -- 30% less for high speed
+                reaction_time_buffer = reaction_time_buffer * 0.6 -- Reduced from 0.7 for high speed
             elseif speed > 300 then
-                reaction_time_buffer = reaction_time_buffer * 0.85 -- 15% less for medium speed
+                reaction_time_buffer = reaction_time_buffer * 0.75 -- Reduced from 0.85 for medium speed
             end
             
             -- Calculate optimal parry timing
             local optimal_timing = time_to_impact - reaction_time_buffer - ping_buffer
-            local should_parry_now = optimal_timing <= 0.016 -- Should parry within one frame (16ms)
+            local should_parry_now = optimal_timing <= 0.008 -- Reduced from 0.016 to 0.008 (8ms instead of 16ms)
             
             -- Only proceed if timing is right (prevents early parrying)
-            if not should_parry_now and distance <= 30 then
+            if not should_parry_now and distance <= 35 then -- Increased from 30 to 35
                 continue
             end
             
@@ -1495,75 +1499,131 @@ function System.autoparry.start()
             local is_close_combat = distance <= 25
             local is_very_close = distance <= 15
             local is_extremely_close = distance <= 8
+            local is_medium_range = distance <= 35 -- Added medium range category
             
             -- Dynamic accuracy adjustments for close combat
             if is_extremely_close then
                 -- Maximum accuracy for extreme close range
-                parry_accuracy = parry_accuracy * 2.5 -- Increased from 2.0
+                parry_accuracy = parry_accuracy * 3.0 -- Increased from 2.5
                 -- Additional compensation for very fast balls at extreme range
-                if speed > 800 then
-                    parry_accuracy = parry_accuracy * 1.8 -- Increased from 1.5
+                if speed > 1000 then
+                    parry_accuracy = parry_accuracy * 2.2 -- Increased from 1.8
+                elseif speed > 800 then
+                    parry_accuracy = parry_accuracy * 2.0 -- Increased from 1.8
                 elseif speed > 400 then
-                    parry_accuracy = parry_accuracy * 1.5 -- Increased from 1.3
+                    parry_accuracy = parry_accuracy * 1.8 -- Increased from 1.5
                 end
                 -- Extra timing buffer for extreme close range
                 if should_parry_now then
-                    parry_accuracy = parry_accuracy * 1.3 -- Bonus for perfect timing
+                    parry_accuracy = parry_accuracy * 1.5 -- Increased from 1.3
                 end
             elseif is_very_close then
                 -- High accuracy for very close range
-                parry_accuracy = parry_accuracy * 2.2 -- Increased from 1.8
+                parry_accuracy = parry_accuracy * 2.8 -- Increased from 2.2
                 -- Speed-based compensation for close range
-                if speed > 600 then
-                    parry_accuracy = parry_accuracy * 1.6 -- Increased from 1.4
+                if speed > 800 then
+                    parry_accuracy = parry_accuracy * 2.0 -- Increased from 1.6
+                elseif speed > 600 then
+                    parry_accuracy = parry_accuracy * 1.8 -- Increased from 1.6
                 elseif speed > 300 then
-                    parry_accuracy = parry_accuracy * 1.4 -- Increased from 1.2
+                    parry_accuracy = parry_accuracy * 1.6 -- Increased from 1.4
                 end
                 -- Timing bonus for very close range
                 if should_parry_now then
-                    parry_accuracy = parry_accuracy * 1.2
+                    parry_accuracy = parry_accuracy * 1.4 -- Increased from 1.2
                 end
             elseif is_close_combat then
                 -- Moderate accuracy for close combat
-                parry_accuracy = parry_accuracy * 1.8 -- Increased from 1.5
+                parry_accuracy = parry_accuracy * 2.2 -- Increased from 1.8
                 -- Speed compensation for close combat
-                if speed > 500 then
-                    parry_accuracy = parry_accuracy * 1.5 -- Increased from 1.3
+                if speed > 600 then
+                    parry_accuracy = parry_accuracy * 1.8 -- Increased from 1.5
+                elseif speed > 500 then
+                    parry_accuracy = parry_accuracy * 1.7 -- Increased from 1.5
                 elseif speed > 200 then
-                    parry_accuracy = parry_accuracy * 1.3 -- Increased from 1.15
+                    parry_accuracy = parry_accuracy * 1.5 -- Increased from 1.3
                 end
                 -- Small timing bonus for close combat
                 if should_parry_now then
-                    parry_accuracy = parry_accuracy * 1.1
+                    parry_accuracy = parry_accuracy * 1.3 -- Increased from 1.1
+                end
+            elseif is_medium_range then
+                -- Added medium range accuracy
+                parry_accuracy = parry_accuracy * 1.6
+                -- Speed compensation for medium range
+                if speed > 400 then
+                    parry_accuracy = parry_accuracy * 1.4
+                elseif speed > 200 then
+                    parry_accuracy = parry_accuracy * 1.2
+                end
+                -- Timing bonus for medium range
+                if should_parry_now then
+                    parry_accuracy = parry_accuracy * 1.2
                 end
             end
             
             -- VELOCITY-BASED IMPROVEMENTS FOR HIGH SPEED BALLS
             local is_high_velocity = speed > 500
             local is_extreme_velocity = speed > 1000
+            local is_very_high_velocity = speed > 1500 -- Added very high velocity category
             
             -- Enhanced accuracy for high velocity balls
-            if is_extreme_velocity then
-                parry_accuracy = parry_accuracy * 1.5 -- More lenient for extreme speed
+            if is_very_high_velocity then
+                parry_accuracy = parry_accuracy * 2.0 -- Added for very high speed
+            elseif is_extreme_velocity then
+                parry_accuracy = parry_accuracy * 1.8 -- Increased from 1.5
             elseif is_high_velocity then
-                parry_accuracy = parry_accuracy * 1.2 -- More lenient for high speed
+                parry_accuracy = parry_accuracy * 1.5 -- Increased from 1.2
             end
             
             -- Additional compensation for high velocity curves
-            if is_high_velocity and System.detection.is_curved() then
-                parry_accuracy = parry_accuracy * 1.3 -- Extra compensation for high speed curves
+            if is_very_high_velocity and System.detection.is_curved() then
+                parry_accuracy = parry_accuracy * 2.5 -- Added for very high speed curves
+            elseif is_extreme_velocity and System.detection.is_curved() then
+                parry_accuracy = parry_accuracy * 2.0 -- Increased from 1.3
+            elseif is_high_velocity and System.detection.is_curved() then
+                parry_accuracy = parry_accuracy * 1.8 -- Increased from 1.3
             end
             
-            -- SLOW BALL COMPENSATION FOR CLOSE COMBAT
+            -- Enhanced curve detection and compensation
+            local curved = System.detection.is_curved()
+            if curved then
+                -- Extra compensation for all curved balls
+                if speed > 300 then
+                    parry_accuracy = parry_accuracy * 1.4
+                else
+                    parry_accuracy = parry_accuracy * 1.2
+                end
+            end
+            
+            -- ENHANCED SLOW BALL COMPENSATION
             local is_slow_ball = speed < 150
-            if is_slow_ball and is_close_combat then
-                -- Extra compensation for slow balls in close combat
-                local slowness_factor = 1.0 - (speed / 150) -- 0 to 1 factor
-                parry_accuracy = parry_accuracy + (slowness_factor * 15) -- Add up to 15 studs
+            local is_very_slow_ball = speed < 80 -- Added very slow ball category
+            
+            if is_very_slow_ball and is_close_combat then
+                -- Maximum compensation for very slow balls in close combat
+                local slowness_factor = 1.0 - (speed / 80) -- 0 to 1 factor for very slow
+                parry_accuracy = parry_accuracy + (slowness_factor * 25) -- Add up to 25 studs
                 
                 if is_extremely_close then
-                    parry_accuracy = parry_accuracy + (slowness_factor * 10) -- Extra 10 studs for extreme range
+                    parry_accuracy = parry_accuracy + (slowness_factor * 15) -- Extra 15 studs for extreme range
+                elseif is_very_close then
+                    parry_accuracy = parry_accuracy + (slowness_factor * 10) -- Extra 10 studs for very close range
                 end
+            elseif is_slow_ball and is_close_combat then
+                -- Extra compensation for slow balls in close combat
+                local slowness_factor = 1.0 - (speed / 150) -- 0 to 1 factor
+                parry_accuracy = parry_accuracy + (slowness_factor * 20) -- Increased from 15 to 20 studs
+                
+                if is_extremely_close then
+                    parry_accuracy = parry_accuracy + (slowness_factor * 12) -- Increased from 10 to 12 studs
+                elseif is_very_close then
+                    parry_accuracy = parry_accuracy + (slowness_factor * 8) -- Added 8 studs for very close range
+                end
+            elseif is_slow_ball and is_medium_range then
+                -- Added slow ball compensation for medium range
+                local slowness_factor = 1.0 - (speed / 150)
+                parry_accuracy = parry_accuracy + (slowness_factor * 10)
             end
             
             local curved = System.detection.is_curved()
@@ -1802,33 +1862,58 @@ function System.manual_spam.start()
         local distance = (LocalPlayer.Character.PrimaryPart.Position - ball.Position).Magnitude
         local velocity = ball.AssemblyLinearVelocity.Magnitude
         local is_slow_ball = velocity < 100
+        local is_very_slow_ball = velocity < 50 -- Added very slow ball category
         local is_very_close = distance < 20
         local is_extremely_close = distance < 10
         local is_close_combat = distance < 30
+        local is_medium_range = distance < 40 -- Added medium range category
         
-        -- Dynamic execution rate based on conditions
-        local executionsPerFrame = 3
-        if is_slow_ball and is_extremely_close then
-            executionsPerFrame = 12 -- Maximum spam for slow balls at extreme range
+        -- Dynamic execution rate based on conditions - significantly increased
+        local executionsPerFrame = 5 -- Increased from 3
+        if is_very_slow_ball and is_extremely_close then
+            executionsPerFrame = 20 -- Increased from 12 for very slow balls at extreme range
+        elseif is_slow_ball and is_extremely_close then
+            executionsPerFrame = 16 -- Increased from 12 for slow balls at extreme range
+        elseif is_very_slow_ball and is_very_close then
+            executionsPerFrame = 14 -- Added for very slow balls at very close range
         elseif is_slow_ball and is_very_close then
-            executionsPerFrame = 10 -- High spam for slow balls at very close range
+            executionsPerFrame = 12 -- Increased from 10 for slow balls at very close range
         elseif is_extremely_close then
-            executionsPerFrame = 8 -- High spam for extreme range
-        elseif is_very_close then
-            executionsPerFrame = 6 -- High spam for very close range
+            executionsPerFrame = 10 -- Increased from 8 for extreme range
+        elseif is_very_slow_ball and is_close_combat then
+            executionsPerFrame = 10 -- Added for very slow balls in close combat
         elseif is_slow_ball and is_close_combat then
-            executionsPerFrame = 7 -- Enhanced spam for slow balls in close combat
+            executionsPerFrame = 9 -- Increased from 7 for slow balls in close combat
+        elseif is_very_close then
+            executionsPerFrame = 8 -- Increased from 6 for very close range
+        elseif is_medium_range then
+            executionsPerFrame = 6 -- Added for medium range
         elseif is_close_combat then
-            executionsPerFrame = 5 -- Moderate spam for close combat
+            executionsPerFrame = 7 -- Increased from 5 for close combat
         elseif is_slow_ball then
-            executionsPerFrame = 5 -- Enhanced spam for slow balls
+            executionsPerFrame = 7 -- Increased from 5 for slow balls
         end
         
-        -- Speed-based execution adjustments
-        if velocity > 800 and is_close_combat then
-            executionsPerFrame = executionsPerFrame + 2 -- Extra spam for high speed close combat
-        elseif velocity > 500 and is_very_close then
-            executionsPerFrame = executionsPerFrame + 1 -- Extra spam for medium high speed close range
+        -- Speed-based execution adjustments - more aggressive
+        if velocity > 1000 and is_close_combat then
+            executionsPerFrame = executionsPerFrame + 4 -- Increased from 2 for extreme speed close combat
+        elseif velocity > 800 and is_close_combat then
+            executionsPerFrame = executionsPerFrame + 3 -- Increased from 2 for very high speed close combat
+        elseif velocity > 600 and is_very_close then
+            executionsPerFrame = executionsPerFrame + 2 -- Increased from 1 for high speed close range
+        elseif velocity > 400 and is_very_close then
+            executionsPerFrame = executionsPerFrame + 1 -- Added for medium high speed close range
+        end
+        
+        -- Curve ball spam enhancement
+        if System.detection.is_curved() then
+            if is_extremely_close then
+                executionsPerFrame = executionsPerFrame + 3 -- Extra spam for curved balls at extreme range
+            elseif is_very_close then
+                executionsPerFrame = executionsPerFrame + 2 -- Extra spam for curved balls at very close range
+            elseif is_close_combat then
+                executionsPerFrame = executionsPerFrame + 1 -- Extra spam for curved balls in close combat
+            end
         end
         
         for i = 1, executionsPerFrame do
