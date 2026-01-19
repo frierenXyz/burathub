@@ -1457,108 +1457,146 @@ function System.autoparry.start()
             
             -- ENHANCED TIMING CALCULATION FOR CLOSE COMBAT
             local time_to_impact = distance / math.max(speed, 1)
-            local reaction_time_buffer = 0.04 -- Reduced from 50ms to 40ms base reaction time
-            local ping_buffer = (PingCompensation:get_compensated_ping() / 1000) * 1.5 -- Increased from 1.2 to 1.5 for better ping compensation
+            local reaction_time_buffer = 0.03 -- Further reduced from 40ms to 30ms base reaction time
+            local ping_buffer = (PingCompensation:get_compensated_ping() / 1000) * 1.8 -- Increased from 1.5 to 1.8 for maximum ping compensation
             
-            -- Dynamic timing adjustments based on distance and speed
+            -- Dynamic timing adjustments based on distance and speed - more aggressive
             if distance <= 8 then
-                reaction_time_buffer = 0.015 -- Reduced from 20ms to 15ms for extreme close range
+                reaction_time_buffer = 0.01 -- Reduced from 15ms to 10ms for extreme close range
             elseif distance <= 15 then
-                reaction_time_buffer = 0.025 -- Reduced from 30ms to 25ms for very close range
+                reaction_time_buffer = 0.02 -- Reduced from 25ms to 20ms for very close range
             elseif distance <= 25 then
-                reaction_time_buffer = 0.035 -- Reduced from 40ms to 35ms for close combat
+                reaction_time_buffer = 0.025 -- Reduced from 35ms to 25ms for close combat
             elseif distance <= 35 then
-                reaction_time_buffer = 0.045 -- Added for medium range
+                reaction_time_buffer = 0.03 -- Reduced from 45ms to 30ms for medium range
+            elseif distance <= 45 then
+                reaction_time_buffer = 0.035 -- Added for extended range
             end
             
-            -- Speed-based timing adjustments - more aggressive for better timing
-            if speed > 1000 then
-                reaction_time_buffer = reaction_time_buffer * 0.3 -- Reduced from 0.5 for extreme speed
+            -- Speed-based timing adjustments - ultra aggressive for fastest reaction
+            if speed > 1500 then
+                reaction_time_buffer = reaction_time_buffer * 0.2 -- Reduced from 0.3 for ultra extreme speed
+            elseif speed > 1000 then
+                reaction_time_buffer = reaction_time_buffer * 0.25 -- Reduced from 0.3 for extreme speed
             elseif speed > 800 then
-                reaction_time_buffer = reaction_time_buffer * 0.4 -- Reduced from 0.5 for very high speed
+                reaction_time_buffer = reaction_time_buffer * 0.3 -- Reduced from 0.4 for very high speed
             elseif speed > 500 then
-                reaction_time_buffer = reaction_time_buffer * 0.6 -- Reduced from 0.7 for high speed
+                reaction_time_buffer = reaction_time_buffer * 0.5 -- Reduced from 0.6 for high speed
             elseif speed > 300 then
-                reaction_time_buffer = reaction_time_buffer * 0.75 -- Reduced from 0.85 for medium speed
+                reaction_time_buffer = reaction_time_buffer * 0.65 -- Reduced from 0.75 for medium speed
             end
             
-            -- Calculate optimal parry timing
-            local optimal_timing = time_to_impact - reaction_time_buffer - ping_buffer
-            local should_parry_now = optimal_timing <= 0.008 -- Reduced from 0.016 to 0.008 (8ms instead of 16ms)
+            -- Calculate optimal parry timing with predictive compensation
+            local ball_prediction = ball.Position + (velocity * 0.1) -- Predict ball position 100ms ahead
+            local predicted_distance = (LocalPlayer.Character.PrimaryPart.Position - ball_prediction).Magnitude
+            local time_to_predicted_impact = predicted_distance / math.max(speed, 1)
+            local optimal_timing = math.min(time_to_impact, time_to_predicted_impact) - reaction_time_buffer - ping_buffer
+            local should_parry_now = optimal_timing <= 0.005 -- Reduced from 0.008 to 0.005 (5ms for ultra-fast reaction)
             
             -- Only proceed if timing is right (prevents early parrying)
-            if not should_parry_now and distance <= 35 then -- Increased from 30 to 35
+            if not should_parry_now and distance <= 40 then -- Increased from 35 to 40
                 continue
             end
             
             local capped_speed_diff = math.min(math.max(speed - 9.5, 0), 650)
-            local speed_divisor = (2.5 + capped_speed_diff * 0.002) * System.__properties.__divisor_multiplier
-            local parry_accuracy = ping_threshold + math.max(speed / speed_divisor, 9.5)
+            local speed_divisor = (2.2 + capped_speed_diff * 0.0018) * System.__properties.__divisor_multiplier -- Reduced divisor for higher accuracy
+            local parry_accuracy = ping_threshold + math.max(speed / speed_divisor, 12) -- Increased base from 9.5 to 12
+            
+            -- PREDICTIVE ACCURACY ENHANCEMENT
+            local predicted_ball_position = ball.Position + (velocity * 0.15) -- Predict 150ms ahead
+            local predicted_distance_to_player = (LocalPlayer.Character.PrimaryPart.Position - predicted_ball_position).Magnitude
+            
+            -- Use predicted distance if it's closer (ball moving toward player)
+            if predicted_distance_to_player < distance then
+                parry_accuracy = parry_accuracy + (distance - predicted_distance_to_player) * 2 -- Bonus for predictive accuracy
+            end
             
             -- ENHANCED CLOSE COMBAT ACCURACY WITH TIMING
             local is_close_combat = distance <= 25
             local is_very_close = distance <= 15
             local is_extremely_close = distance <= 8
             local is_medium_range = distance <= 35 -- Added medium range category
+            local is_extended_range = distance <= 45 -- Added extended range category
             
-            -- Dynamic accuracy adjustments for close combat
+            -- Dynamic accuracy adjustments for close combat - significantly increased
             if is_extremely_close then
                 -- Maximum accuracy for extreme close range
-                parry_accuracy = parry_accuracy * 3.0 -- Increased from 2.5
+                parry_accuracy = parry_accuracy * 4.0 -- Increased from 3.0
                 -- Additional compensation for very fast balls at extreme range
-                if speed > 1000 then
-                    parry_accuracy = parry_accuracy * 2.2 -- Increased from 1.8
+                if speed > 1500 then
+                    parry_accuracy = parry_accuracy * 3.0 -- Increased from 2.2
+                elseif speed > 1000 then
+                    parry_accuracy = parry_accuracy * 2.8 -- Increased from 2.2
                 elseif speed > 800 then
-                    parry_accuracy = parry_accuracy * 2.0 -- Increased from 1.8
+                    parry_accuracy = parry_accuracy * 2.5 -- Increased from 2.0
                 elseif speed > 400 then
-                    parry_accuracy = parry_accuracy * 1.8 -- Increased from 1.5
+                    parry_accuracy = parry_accuracy * 2.2 -- Increased from 1.8
                 end
                 -- Extra timing buffer for extreme close range
                 if should_parry_now then
-                    parry_accuracy = parry_accuracy * 1.5 -- Increased from 1.3
+                    parry_accuracy = parry_accuracy * 2.0 -- Increased from 1.5
                 end
             elseif is_very_close then
                 -- High accuracy for very close range
-                parry_accuracy = parry_accuracy * 2.8 -- Increased from 2.2
+                parry_accuracy = parry_accuracy * 3.5 -- Increased from 2.8
                 -- Speed-based compensation for close range
-                if speed > 800 then
-                    parry_accuracy = parry_accuracy * 2.0 -- Increased from 1.6
+                if speed > 1200 then
+                    parry_accuracy = parry_accuracy * 2.5 -- Added for ultra high speed
+                elseif speed > 800 then
+                    parry_accuracy = parry_accuracy * 2.3 -- Increased from 2.0
                 elseif speed > 600 then
-                    parry_accuracy = parry_accuracy * 1.8 -- Increased from 1.6
+                    parry_accuracy = parry_accuracy * 2.1 -- Increased from 1.8
                 elseif speed > 300 then
-                    parry_accuracy = parry_accuracy * 1.6 -- Increased from 1.4
+                    parry_accuracy = parry_accuracy * 1.9 -- Increased from 1.6
                 end
                 -- Timing bonus for very close range
                 if should_parry_now then
-                    parry_accuracy = parry_accuracy * 1.4 -- Increased from 1.2
+                    parry_accuracy = parry_accuracy * 1.8 -- Increased from 1.4
                 end
             elseif is_close_combat then
                 -- Moderate accuracy for close combat
-                parry_accuracy = parry_accuracy * 2.2 -- Increased from 1.8
+                parry_accuracy = parry_accuracy * 3.0 -- Increased from 2.2
                 -- Speed compensation for close combat
-                if speed > 600 then
-                    parry_accuracy = parry_accuracy * 1.8 -- Increased from 1.5
+                if speed > 800 then
+                    parry_accuracy = parry_accuracy * 2.2 -- Increased from 1.8
+                elseif speed > 600 then
+                    parry_accuracy = parry_accuracy * 2.0 -- Increased from 1.8
                 elseif speed > 500 then
-                    parry_accuracy = parry_accuracy * 1.7 -- Increased from 1.5
+                    parry_accuracy = parry_accuracy * 1.9 -- Increased from 1.7
                 elseif speed > 200 then
-                    parry_accuracy = parry_accuracy * 1.5 -- Increased from 1.3
+                    parry_accuracy = parry_accuracy * 1.7 -- Increased from 1.5
                 end
                 -- Small timing bonus for close combat
                 if should_parry_now then
-                    parry_accuracy = parry_accuracy * 1.3 -- Increased from 1.1
+                    parry_accuracy = parry_accuracy * 1.6 -- Increased from 1.3
                 end
             elseif is_medium_range then
-                -- Added medium range accuracy
-                parry_accuracy = parry_accuracy * 1.6
+                -- Added medium range accuracy - increased
+                parry_accuracy = parry_accuracy * 2.2 -- Increased from 1.6
                 -- Speed compensation for medium range
+                if speed > 600 then
+                    parry_accuracy = parry_accuracy * 1.8 -- Increased from 1.4
+                elseif speed > 400 then
+                    parry_accuracy = parry_accuracy * 1.5 -- Increased from 1.4
+                elseif speed > 200 then
+                    parry_accuracy = parry_accuracy * 1.3 -- Increased from 1.2
+                end
+                -- Timing bonus for medium range
+                if should_parry_now then
+                    parry_accuracy = parry_accuracy * 1.5 -- Increased from 1.2
+                end
+            elseif is_extended_range then
+                -- Added extended range accuracy
+                parry_accuracy = parry_accuracy * 1.8
+                -- Speed compensation for extended range
                 if speed > 400 then
                     parry_accuracy = parry_accuracy * 1.4
                 elseif speed > 200 then
                     parry_accuracy = parry_accuracy * 1.2
                 end
-                -- Timing bonus for medium range
+                -- Timing bonus for extended range
                 if should_parry_now then
-                    parry_accuracy = parry_accuracy * 1.2
+                    parry_accuracy = parry_accuracy * 1.3
                 end
             end
             
